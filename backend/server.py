@@ -27,9 +27,16 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 
-@app.get("/")
+from fastapi import Response
+
+@app.api_route("/", methods=["GET", "HEAD"])
 def health():
     return {"status": "running"}
+
+
+# @app.get("/")
+# def health():
+#     return {"status": "running"}
 
 
 # ❌ REMOVE THIS LINE - no more passlib
