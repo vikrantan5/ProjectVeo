@@ -26,6 +26,12 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+
+@app.get("/")
+def health():
+    return {"status": "running"}
+
+
 # ❌ REMOVE THIS LINE - no more passlib
 # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
