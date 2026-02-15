@@ -26,18 +26,18 @@ flake8==7.3.0
 frozenlist==1.8.0
 fsspec==2026.1.0
 
-# Google packages - FINAL FIX with updated google-auth
-google-ai-generativelanguage==0.6.10
+# ⭐ FINAL GOOGLE PACKAGES - YE VERSIONS SABSE SAHI HAIN ⭐
+google-ai-generativelanguage==0.6.6      # ⬅️ CHANGED: 0.6.6 (google-generativeai 0.7.2 ke saath compatible)
 google-api-core==2.29.0
 google-api-python-client==2.189.0
-google-auth==2.48.0                    # ⬆️ UPDATED to satisfy google-genai 1.62.0
+google-auth==2.48.0
 google-auth-httplib2==0.3.0
 google-cloud-core==2.5.0
 google-cloud-firestore==2.18.0
 google-cloud-storage==3.9.0
 google-crc32c==1.8.0
 google-genai==1.62.0
-google-generativeai==0.7.2
+google-generativeai==0.7.2                # ✅ (ab google-ai-generativelanguage 0.6.6 ke saath compatible)
 google-resumable-media==2.8.0
 googleapis-common-protos==1.65.0
 
@@ -87,8 +87,6 @@ platformdirs==4.5.1
 pluggy==1.6.0
 propcache==0.4.1
 proto-plus==1.24.0
-
-# ✅ FIXED protobuf
 protobuf==4.25.5
 
 pyasn1==0.6.2
