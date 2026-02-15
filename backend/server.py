@@ -62,6 +62,10 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class PasswordChange(BaseModel):
+    old_password: str
+    new_password: str
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -248,6 +252,20 @@ async def login(credentials: UserLogin):
 @api_router.get("/auth/me", response_model=User)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+@api_router.post("/auth/change-password")
+async def change_password(password_data: PasswordChange, current_user: User = Depends(get_current_user)):
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not pwd_context.verify(password_data.old_password, user_doc.get("hashed_password", "")):
+        raise HTTPException(status_code=401, detail="Incorrect current password")
+    
+    new_hashed_password = pwd_context.hash(password_data.new_password)
+    await db.users.update_one({"id": current_user.id}, {"$set": {"hashed_password": new_hashed_password}})
+    
+    return {"message": "Password changed successfully"}
 
 @api_router.post("/clients", response_model=Client)
 async def create_client(client_data: ClientCreate, current_user: User = Depends(get_admin_user)):

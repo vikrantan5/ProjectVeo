@@ -14,6 +14,7 @@ import ProjectForm from '@/pages/ProjectForm';
 import ProjectDetail from '@/pages/ProjectDetail';
 import ClientProjectView from '@/pages/ClientProjectView';
 import BookingsList from '@/pages/BookingsList';
+import ChangePassword from '@/pages/ChangePassword';
 
 import '@/App.css';
 
@@ -73,6 +74,14 @@ function App() {
               element={
                 <ProtectedRoute requireAdmin>
                   <BookingsList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/change-password"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <ChangePassword />
                 </ProtectedRoute>
               }
             />

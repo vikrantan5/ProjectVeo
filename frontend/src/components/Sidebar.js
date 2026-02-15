@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FolderKanban, Calendar, FileText, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, FolderKanban, Calendar, FileText, LogOut, Menu, X, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 
@@ -56,7 +56,17 @@ const Sidebar = () => {
           })}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
+          <Link to="/admin/change-password">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3"
+              data-testid="sidebar-change-password-link"
+            >
+              <Lock className="w-5 h-5" />
+              {!collapsed && <span>Change Password</span>}
+            </Button>
+          </Link>
           <Button
             variant="ghost"
             className="w-full justify-start gap-3"

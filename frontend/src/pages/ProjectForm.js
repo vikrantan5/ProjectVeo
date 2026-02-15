@@ -130,7 +130,7 @@ const ProjectForm = () => {
                 </div>
               </div>
               <div>
-                <Label htmlFor="total_price">Total Price ($)</Label>
+                <Label htmlFor="total_price">Total Price (₹)</Label>
                 <Input
                   id="total_price"
                   type="number"

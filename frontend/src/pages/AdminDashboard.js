@@ -31,7 +31,7 @@ const AdminDashboard = () => {
     { icon: Clock, label: 'Active Projects', value: stats?.active_projects || 0, color: 'text-orange-500' },
     { icon: CheckCircle2, label: 'Completed', value: stats?.completed_projects || 0, color: 'text-green-500' },
     { icon: Calendar, label: 'Pending Bookings', value: stats?.pending_bookings || 0, color: 'text-yellow-500' },
-    { icon: DollarSign, label: 'Pending Payments', value: `$${stats?.pending_payments || 0}`, color: 'text-red-500' },
+    { icon: DollarSign, label: 'Pending Payments', value: `₹${stats?.pending_payments || 0}`, color: 'text-red-500' },
   ];
 
   return (

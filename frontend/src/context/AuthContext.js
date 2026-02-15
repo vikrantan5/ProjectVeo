@@ -58,8 +58,16 @@ export const AuthProvider = ({ children }) => {
     delete axios.defaults.headers.common['Authorization'];
   };
 
+  const changePassword = async (oldPassword, newPassword) => {
+    const response = await axios.post(`${API}/auth/change-password`, {
+      old_password: oldPassword,
+      new_password: newPassword
+    });
+    return response.data;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

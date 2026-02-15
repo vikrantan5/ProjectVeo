@@ -115,10 +115,10 @@ const ProjectsList = () => {
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <DollarSign className="w-4 h-4 text-green-500" />
-                          <span className="font-mono">${project.total_price}</span>
+                          <span className="font-mono">₹{project.total_price}</span>
                         </div>
                         {remaining > 0 && (
-                          <p className="text-xs text-red-500">Due: ${remaining}</p>
+                          <p className="text-xs text-red-500">Due: ₹{remaining}</p>
                         )}
                       </div>
                     </div>

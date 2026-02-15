@@ -78,16 +78,16 @@ const ClientProjectView = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total</span>
-                <span className="font-mono font-semibold">${project.total_price}</span>
+                <span className="font-mono font-semibold">₹{project.total_price}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Paid</span>
-                <span className="font-mono text-green-500">${project.amount_paid}</span>
+                <span className="font-mono text-green-500">₹{project.amount_paid}</span>
               </div>
               {remaining > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Due</span>
-                  <span className="font-mono text-red-500">${remaining}</span>
+                  <span className="font-mono text-red-500">₹{remaining}</span>
                 </div>
               )}
             </div>
