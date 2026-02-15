@@ -12,8 +12,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from passlib.context import CryptContext
 import jwt
-import firebase_admin
-from firebase_admin import credentials, storage
+from supabase import create_client, Client
 import base64
 import json
 
@@ -34,15 +33,18 @@ SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-product
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
-firebase_config_json = os.environ.get('FIREBASE_CONFIG_JSON', '{}')
-if firebase_config_json and firebase_config_json != '{}':
+# Initialize Supabase client
+supabase_url = os.environ.get('SUPABASE_URL', '')
+supabase_key = os.environ.get('SUPABASE_KEY', '')
+supabase_bucket = os.environ.get('SUPABASE_BUCKET', 'project-files')
+
+supabase: Optional[Client] = None
+if supabase_url and supabase_key:
     try:
-        firebase_cred_dict = json.loads(firebase_config_json)
-        cred = credentials.Certificate(firebase_cred_dict)
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred, {'storageBucket': os.environ.get('FIREBASE_STORAGE_BUCKET', '')})
+        supabase = create_client(supabase_url, supabase_key)
+        logging.info("Supabase client initialized successfully")
     except Exception as e:
-        logging.warning(f"Firebase initialization failed: {e}")
+        logging.warning(f"Supabase initialization failed: {e}")
 
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -61,10 +63,6 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
-
-class PasswordChange(BaseModel):
-    old_password: str
-    new_password: str
 
 class Token(BaseModel):
     access_token: str
@@ -253,20 +251,6 @@ async def login(credentials: UserLogin):
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
-@api_router.post("/auth/change-password")
-async def change_password(password_data: PasswordChange, current_user: User = Depends(get_current_user)):
-    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
-    if not user_doc:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    if not pwd_context.verify(password_data.old_password, user_doc.get("hashed_password", "")):
-        raise HTTPException(status_code=401, detail="Incorrect current password")
-    
-    new_hashed_password = pwd_context.hash(password_data.new_password)
-    await db.users.update_one({"id": current_user.id}, {"$set": {"hashed_password": new_hashed_password}})
-    
-    return {"message": "Password changed successfully"}
-
 @api_router.post("/clients", response_model=Client)
 async def create_client(client_data: ClientCreate, current_user: User = Depends(get_admin_user)):
     client = Client(**client_data.model_dump())
@@ -442,22 +426,32 @@ async def upload_file(
     description: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user)
 ):
-    if not firebase_admin._apps:
-        raise HTTPException(status_code=500, detail="Firebase not configured. Please add FIREBASE_CONFIG_JSON to backend .env")
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not configured. Please add SUPABASE_URL and SUPABASE_KEY to backend .env")
     
     try:
-        bucket = storage.bucket()
-        filename = f"{project_id}/{uuid.uuid4()}_{file.filename}"
-        blob = bucket.blob(filename)
-        
+        # Read file content
         content = await file.read()
-        blob.upload_from_string(content, content_type=file.content_type)
-        blob.make_public()
         
+        # Generate unique filename with project folder structure
+        file_extension = file.filename.split('.')[-1] if '.' in file.filename else ''
+        unique_filename = f"{project_id}/{uuid.uuid4()}.{file_extension}"
+        
+        # Upload to Supabase Storage
+        response = supabase.storage.from_(supabase_bucket).upload(
+            path=unique_filename,
+            file=content,
+            file_options={"content-type": file.content_type or "application/octet-stream"}
+        )
+        
+        # Get public URL
+        public_url = supabase.storage.from_(supabase_bucket).get_public_url(unique_filename)
+        
+        # Create file record in database
         file_upload = FileUpload(
             project_id=project_id,
             filename=file.filename,
-            file_url=blob.public_url,
+            file_url=public_url,
             file_type=file.content_type or "unknown",
             category=category,
             description=description,
@@ -470,6 +464,7 @@ async def upload_file(
         
         return file_upload
     except Exception as e:
+        logging.error(f"Upload failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @api_router.get("/files/{project_id}", response_model=List[FileUpload])
@@ -496,23 +491,33 @@ async def upload_srs(
     description: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user)
 ):
-    if not firebase_admin._apps:
-        raise HTTPException(status_code=500, detail="Firebase not configured. Please add FIREBASE_CONFIG_JSON to backend .env")
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not configured. Please add SUPABASE_URL and SUPABASE_KEY to backend .env")
     
     try:
-        bucket = storage.bucket()
-        filename = f"{project_id}/srs/{uuid.uuid4()}_{file.filename}"
-        blob = bucket.blob(filename)
-        
+        # Read file content
         content = await file.read()
-        blob.upload_from_string(content, content_type=file.content_type)
-        blob.make_public()
         
+        # Generate unique filename for SRS documents
+        file_extension = file.filename.split('.')[-1] if '.' in file.filename else ''
+        unique_filename = f"{project_id}/srs/{uuid.uuid4()}.{file_extension}"
+        
+        # Upload to Supabase Storage
+        response = supabase.storage.from_(supabase_bucket).upload(
+            path=unique_filename,
+            file=content,
+            file_options={"content-type": file.content_type or "application/octet-stream"}
+        )
+        
+        # Get public URL
+        public_url = supabase.storage.from_(supabase_bucket).get_public_url(unique_filename)
+        
+        # Create SRS document record
         srs_doc = SRSDocument(
             project_id=project_id,
             title=title,
             version=version,
-            file_url=blob.public_url,
+            file_url=public_url,
             uploaded_by=current_user.name,
             description=description
         )
@@ -523,6 +528,7 @@ async def upload_srs(
         
         return srs_doc
     except Exception as e:
+        logging.error(f"Upload failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @api_router.get("/srs/{project_id}", response_model=List[SRSDocument])
