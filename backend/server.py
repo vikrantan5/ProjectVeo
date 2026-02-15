@@ -10,11 +10,11 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
-from passlib.context import CryptContext
 import jwt
 from supabase import create_client, Client
 import base64
 import json
+import bcrypt  # Direct bcrypt import
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -26,7 +26,9 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# ❌ REMOVE THIS LINE - no more passlib
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 security = HTTPBearer()
 
 SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
@@ -45,6 +47,42 @@ if supabase_url and supabase_key:
         logging.info("Supabase client initialized successfully")
     except Exception as e:
         logging.warning(f"Supabase initialization failed: {e}")
+
+# ============================================
+# ✅ NEW: Direct bcrypt helper functions
+# ============================================
+def hash_password(password: str) -> str:
+    """
+    Hash a password using bcrypt
+    - Automatically handles 72 byte limit
+    - Returns string hash
+    """
+    # Convert password to bytes
+    password_bytes = password.encode('utf-8')
+    
+    # Generate salt and hash
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    
+    # Return as string
+    return hashed.decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Verify a password against its hash
+    - Returns True if matches, False otherwise
+    """
+    try:
+        # Convert to bytes
+        plain_bytes = plain_password.encode('utf-8')
+        hashed_bytes = hashed_password.encode('utf-8')
+        
+        # Verify
+        return bcrypt.checkpw(plain_bytes, hashed_bytes)
+    except Exception as e:
+        logging.error(f"Password verification error: {e}")
+        return False
+# ============================================
 
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -216,13 +254,18 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
 
+# ============================================
+# ✅ FIXED: Register with direct bcrypt
+# ============================================
 @api_router.post("/auth/register", response_model=Token)
 async def register(user_data: UserCreate):
     existing = await db.users.find_one({"email": user_data.email}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    hashed_password = pwd_context.hash(user_data.password)
+    # ✅ Use direct bcrypt hash
+    hashed_password = hash_password(user_data.password)
+    
     user = User(
         email=user_data.email,
         name=user_data.name,
@@ -237,10 +280,15 @@ async def register(user_data: UserCreate):
     access_token = create_access_token(data={"sub": user.id, "role": user.role})
     return Token(access_token=access_token, token_type="bearer", user=user)
 
+# ============================================
+# ✅ FIXED: Login with direct bcrypt
+# ============================================
 @api_router.post("/auth/login", response_model=Token)
 async def login(credentials: UserLogin):
     user_doc = await db.users.find_one({"email": credentials.email}, {"_id": 0})
-    if not user_doc or not pwd_context.verify(credentials.password, user_doc.get("hashed_password", "")):
+    
+    # ✅ Use direct bcrypt verify
+    if not user_doc or not verify_password(credentials.password, user_doc.get("hashed_password", "")):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
     user = User(**user_doc)

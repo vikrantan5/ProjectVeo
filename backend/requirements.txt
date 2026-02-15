@@ -4,7 +4,7 @@ aiosignal
 annotated-types
 anyio
 attrs
-bcrypt
+bcrypt==4.0.1
 black
 boto3
 botocore
@@ -80,7 +80,7 @@ oauthlib
 openai
 packaging
 pandas
-passlib
+
 pathspec
 pillow
 platformdirs
